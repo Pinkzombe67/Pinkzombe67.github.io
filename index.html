@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบตีบิลหอพัก (หลายห้อง)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+        body { font-family: 'Noto Sans Thai', system-ui, sans-serif; }
+        .bill { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .room-tab { transition: all 0.2s; }
+    </style>
+</head>
+<body class="bg-gray-100 py-8">
+    <div class="max-w-7xl mx-auto px-4">
+        <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">🧾 ระบบตีบิลหอพัก (หลายห้อง)</h1>
+
+        <div class="grid grid-cols-12 gap-6">
+            <!-- Sidebar: รายชื่อห้อง -->
+            <div class="col-span-12 lg:col-span-3 bg-white rounded-2xl shadow p-4 h-fit">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-lg">รายการห้อง</h2>
+                    <button onclick="addNewRoom()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium">
+                        <span class="text-xl leading-none">+</span> เพิ่มห้อง
+                    </button>
+                </div>
+                
+                <div id="roomList" class="space-y-1 max-h-[70vh] overflow-auto"></div>
+            </div>
+
+            <!-- ฟอร์มกรอกข้อมูล -->
+            <div class="col-span-12 lg:col-span-5 bg-white p-6 rounded-2xl shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">กรอกข้อมูลบิล</h2>
+                    <span id="currentRoomTitle" class="font-medium text-blue-600"></span>
+                </div>
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อห้อง / ผู้เช่า</label>
+                        <input id="roomName" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ค่าเช่าห้อง (บาท)</label>
+                        <input id="roomRent" type="number" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+
+                    <!-- ค่าไฟ -->
+                    <div class="bg-blue-50 p-4 rounded-xl">
+                        <h3 class="font-semibold text-blue-700 mb-3">💡 ค่าไฟฟ้า</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-600">เลขมิเตอร์เก่า</label>
+                                <input id="elecOld" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">เลขมิเตอร์ใหม่</label>
+                                <input id="elecNew" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-xs text-gray-600">ราคาต่อหน่วย (บาท)</label>
+                            <input id="elecRate" type="number" step="0.01" value="8" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        </div>
+                    </div>
+
+                    <!-- ค่าน้ำ -->
+                    <div class="bg-cyan-50 p-4 rounded-xl">
+                        <h3 class="font-semibold text-cyan-700 mb-3">💧 ค่าน้ำ</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-600">เลขมิเตอร์เก่า</label>
+                                <input id="waterOld" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">เลขมิเตอร์ใหม่</label>
+                                <input id="waterNew" type="number" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-xs text-gray-600">ราคาต่อหน่วย (บาท)</label>
+                            <input id="waterRate" type="number" step="0.01" value="25" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        </div>
+                    </div>
+
+                    <!-- ค่าอื่นๆ -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ค่าอื่นๆ</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <input id="other1Name" placeholder="ชื่อรายการ" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <input id="other1Price" type="number" placeholder="จำนวนเงิน" class="w-full border border-gray-300 rounded-lg px-3 py-2 mt-1">
+                            </div>
+                            <div>
+                                <input id="other2Name" placeholder="ชื่อรายการ" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <input id="other2Price" type="number" placeholder="จำนวนเงิน" class="w-full border border-gray-300 rounded-lg px-3 py-2 mt-1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="calculateCurrentBill()" 
+                        class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl">
+                    คำนวณบิลห้องนี้
+                </button>
+            </div>
+
+            <!-- ตัวอย่างบิล -->
+            <div class="col-span-12 lg:col-span-4">
+                <div id="billPreview" class="bill bg-white rounded-2xl p-6 border min-h-[520px]">
+                    <div id="billContent" class="space-y-4"></div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="downloadCurrentBill()" 
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
+                        📸 บันทึกเป็นภาพ
+                    </button>
+                    <button onclick="printBill()" 
+                            class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 rounded-xl">
+                        🖨️ พิมพ์
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rooms = [];
+        let currentRoomId = null;
+
+        // โหลดข้อมูลจาก localStorage
+        function loadRooms() {
+            const saved = localStorage.getItem('dormRooms');
+            if (saved) {
+                rooms = JSON.parse(saved);
+                if (rooms.length > 0) {
+                    currentRoomId = rooms[0].id;
+                }
+            } else {
+                // ข้อมูลเริ่มต้น
+                rooms = [
+                    {
+                        id: Date.now(),
+                        name: "ห้อง 101 - นายสมชาย",
+                        rent: 3500,
+                        elecOld: 1234,
+                        elecNew: 1356,
+                        elecRate: 8,
+                        waterOld: 456,
+                        waterNew: 478,
+                        waterRate: 25,
+                        other1Name: "ค่าอินเทอร์เน็ต",
+                        other1Price: 300,
+                        other2Name: "ค่าทำความสะอาด",
+                        other2Price: 100
+                    }
+                ];
+                currentRoomId = rooms[0].id;
+            }
+            renderRoomList();
+            loadCurrentRoom();
+        }
+
+        function saveRooms() {
+            localStorage.setItem('dormRooms', JSON.stringify(rooms));
+        }
+
+        function renderRoomList() {
+            const container = document.getElementById('roomList');
+            container.innerHTML = '';
+
+            rooms.forEach(room => {
+                const isActive = room.id === currentRoomId;
+                const div = document.createElement('div');
+                div.className = `room-tab px-4 py-3 rounded-xl cursor-pointer flex justify-between items-center ${isActive ? 'bg-blue-100 border border-blue-500' : 'hover:bg-gray-100'}`;
+                div.innerHTML = `
+                    <span class="font-medium">${room.name}</span>
+                    <button onclick="deleteRoom(${room.id}); event.stopImmediatePropagation();" 
+                            class="text-red-500 hover:text-red-700 text-xl">×</button>
+                `;
+                div.onclick = () => {
+                    currentRoomId = room.id;
+                    renderRoomList();
+                    loadCurrentRoom();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function addNewRoom() {
+            const newRoom = {
+                id: Date.now(),
+                name: `ห้อง ${rooms.length + 101} - ผู้เช่าใหม่`,
+                rent: 3500,
+                elecOld: 0,
+                elecNew: 0,
+                elecRate: 8,
+                waterOld: 0,
+                waterNew: 0,
+                waterRate: 25,
+                other1Name: "ค่าอินเทอร์เน็ต",
+                other1Price: 300,
+                other2Name: "",
+                other2Price: 0
+            };
+            rooms.push(newRoom);
+            currentRoomId = newRoom.id;
+            saveRooms();
+            renderRoomList();
+            loadCurrentRoom();
+        }
+
+        function deleteRoom(id) {
+            if (rooms.length === 1) {
+                alert("ต้องมีห้องอย่างน้อย 1 ห้อง");
+                return;
+            }
+            if (confirm("ลบห้องนี้?")) {
+                rooms = rooms.filter(r => r.id !== id);
+                if (currentRoomId === id) {
+                    currentRoomId = rooms[0].id;
+                }
+                saveRooms();
+                renderRoomList();
+                loadCurrentRoom();
+            }
+        }
+
+        function loadCurrentRoom() {
+            const room = rooms.find(r => r.id === currentRoomId);
+            if (!room) return;
+
+            document.getElementById('currentRoomTitle').textContent = room.name;
+            document.getElementById('roomName').value = room.name;
+            document.getElementById('roomRent').value = room.rent;
+            document.getElementById('elecOld').value = room.elecOld;
+            document.getElementById('elecNew').value = room.elecNew;
+            document.getElementById('elecRate').value = room.elecRate;
+            document.getElementById('waterOld').value = room.waterOld;
+            document.getElementById('waterNew').value = room.waterNew;
+            document.getElementById('waterRate').value = room.waterRate;
+            document.getElementById('other1Name').value = room.other1Name || "";
+            document.getElementById('other1Price').value = room.other1Price || "";
+            document.getElementById('other2Name').value = room.other2Name || "";
+            document.getElementById('other2Price').value = room.other2Price || "";
+
+            calculateCurrentBill();
+        }
+
+        // อัพเดทข้อมูลห้องปัจจุบัน
+        function updateCurrentRoom() {
+            const room = rooms.find(r => r.id === currentRoomId);
+            if (!room) return;
+
+            room.name = document.getElementById('roomName').value;
+            room.rent = parseFloat(document.getElementById('roomRent').value) || 0;
+            room.elecOld = parseFloat(document.getElementById('elecOld').value) || 0;
+            room.elecNew = parseFloat(document.getElementById('elecNew').value) || 0;
+            room.elecRate = parseFloat(document.getElementById('elecRate').value) || 8;
+            room.waterOld = parseFloat(document.getElementById('waterOld').value) || 0;
+            room.waterNew = parseFloat(document.getElementById('waterNew').value) || 0;
+            room.waterRate = parseFloat(document.getElementById('waterRate').value) || 25;
+            room.other1Name = document.getElementById('other1Name').value;
+            room.other1Price = parseFloat(document.getElementById('other1Price').value) || 0;
+            room.other2Name = document.getElementById('other2Name').value;
+            room.other2Price = parseFloat(document.getElementById('other2Price').value) || 0;
+
+            saveRooms();
+            renderRoomList();
+        }
+
+        function calculateCurrentBill() {
+            updateCurrentRoom(); // บันทึกก่อนคำนวณ
+            const room = rooms.find(r => r.id === currentRoomId);
+            if (!room) return;
+
+            const elecUnit = Math.max(0, room.elecNew - room.elecOld);
+            const elecCost = elecUnit * room.elecRate;
+            const waterUnit = Math.max(0, room.waterNew - room.waterOld);
+            const waterCost = waterUnit * room.waterRate;
+            const total = room.rent + elecCost + waterCost + room.other1Price + room.other2Price;
+
+            let html = `
+                <div class="text-center border-b pb-4 mb-6">
+                    <h2 class="text-2xl font-bold">บิลค่าเช่าหอพัก</h2>
+                    <p class="text-sm text-gray-500">เดือนพฤษภาคม 2569</p>
+                </div>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between py-1">
+                        <span class="font-medium">ห้องพัก:</span>
+                        <span class="font-semibold">${room.name}</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-t">
+                        <span>ค่าเช่าห้อง</span>
+                        <span>${room.rent.toLocaleString()} บาท</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-t">
+                        <span>ค่าไฟฟ้า (${elecUnit} หน่วย × ${room.elecRate} บาท)</span>
+                        <span>${elecCost.toLocaleString()} บาท</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-t">
+                        <span>ค่าน้ำ (${waterUnit} หน่วย × ${room.waterRate} บาท)</span>
+                        <span>${waterCost.toLocaleString()} บาท</span>
+                    </div>`;
+
+            if (room.other1Price > 0) {
+                html += `<div class="flex justify-between py-1 border-t"><span>${room.other1Name}</span><span>${room.other1Price.toLocaleString()} บาท</span></div>`;
+            }
+            if (room.other2Price > 0) {
+                html += `<div class="flex justify-between py-1 border-t"><span>${room.other2Name}</span><span>${room.other2Price.toLocaleString()} บาท</span></div>`;
+            }
+
+            html += `
+                    <div class="flex justify-between py-4 mt-6 border-t-2 border-b-2 text-xl font-bold">
+                        <span>ยอดรวมทั้งหมด</span>
+                        <span class="text-red-600">${total.toLocaleString()} บาท</span>
+                    </div>
+                    <div class="text-center text-xs text-gray-500 mt-8">
+                        ขอบคุณที่ใช้บริการ • ชำระเงินภายในวันที่ 10<br>
+                        โอนเข้าบัญชี ธนาคารไทยพาณิชย์ • 123-456789-0
+                    </div>
+                </div>`;
+
+            document.getElementById('billContent').innerHTML = html;
+        }
+
+        function downloadCurrentBill() {
+            updateCurrentRoom();
+            const bill = document.getElementById('billPreview');
+            
+            html2canvas(bill, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                const room = rooms.find(r => r.id === currentRoomId);
+                link.download = `บิล_${room ? room.name : 'ห้อง'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        function printBill() {
+            window.print();
+        }
+
+        // อัพเดทข้อมูลทุกครั้งที่มีการเปลี่ยนแปลง
+        document.addEventListener('input', () => {
+            if (currentRoomId) updateCurrentRoom();
+        });
+
+        // เริ่มต้นระบบ
+        window.onload = loadRooms;
+    </script>
+</body>
+</html>

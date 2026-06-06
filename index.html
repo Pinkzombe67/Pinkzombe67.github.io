@@ -16,13 +16,17 @@
 <body class="bg-gray-100 py-8">
     <div class="max-w-7xl mx-auto px-4">
         <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">🧾 ระบบตีบิลหอพัก (หลายห้อง)</h1>
-        
+        <div class="text-center text-amber-600 text-sm mb-4">
+            ⚠️ ข้อมูลจะหายเมื่อรีเฟรชหน้า (เนื่องจากถูก sandbox)
+        </div>
+       
         <div class="grid grid-cols-12 gap-6">
             <!-- Sidebar -->
             <div class="col-span-12 lg:col-span-3 bg-white rounded-2xl shadow p-4 h-fit">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="font-semibold text-lg">รายการห้อง</h2>
-                    <button onclick="addNewRoom()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium">
+                    <button onclick="addNewRoom()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium">
                         <span class="text-xl leading-none">+</span> เพิ่มห้อง
                     </button>
                 </div>
@@ -35,7 +39,6 @@
                     <h2 class="text-xl font-semibold">กรอกข้อมูลบิล</h2>
                     <span id="currentRoomTitle" class="font-medium text-blue-600"></span>
                 </div>
-
                 <div class="space-y-5">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อห้อง / ผู้เช่า</label>
@@ -136,34 +139,31 @@
         let currentRoomId = null;
 
         function loadRooms() {
-            const saved = localStorage.getItem('dormRooms');
-            if (saved) {
-                rooms = JSON.parse(saved);
-                if (rooms.length > 0) currentRoomId = rooms[0].id;
-            } else {
-                rooms = [{
-                    id: Date.now(),
-                    name: "ห้อง 101 - นายสมชาย",
-                    rent: 3500,
-                    elecOld: 1234,
-                    elecNew: 1356,
-                    elecRate: 8,
-                    waterOld: 456,
-                    waterNew: 478,
-                    waterRate: 25,
-                    other1Name: "ค่าอินเทอร์เน็ต",
-                    other1Price: 300,
-                    other2Name: "ค่าทำความสะอาด",
-                    other2Price: 100
-                }];
-                currentRoomId = rooms[0].id;
-            }
+            // ใช้ข้อมูลเริ่มต้นเมื่อไม่มีข้อมูล
+            rooms = [{
+                id: Date.now(),
+                name: "ห้อง 101 - นายสมชาย",
+                rent: 3500,
+                elecOld: 1234,
+                elecNew: 1356,
+                elecRate: 8,
+                waterOld: 456,
+                waterNew: 478,
+                waterRate: 25,
+                other1Name: "ค่าอินเทอร์เน็ต",
+                other1Price: 300,
+                other2Name: "ค่าทำความสะอาด",
+                other2Price: 100
+            }];
+            currentRoomId = rooms[0].id;
+
             renderRoomList();
             loadCurrentRoom();
         }
 
         function saveRooms() {
-            localStorage.setItem('dormRooms', JSON.stringify(rooms));
+            // ไม่ใช้ localStorage เพราะ sandbox
+            // ข้อมูลเก็บใน memory เท่านั้น
         }
 
         function renderRoomList() {
@@ -198,7 +198,6 @@
             };
             rooms.push(newRoom);
             currentRoomId = newRoom.id;
-            saveRooms();
             renderRoomList();
             loadCurrentRoom();
         }
@@ -207,8 +206,9 @@
             if (rooms.length === 1) return alert("ต้องมีห้องอย่างน้อย 1 ห้อง");
             if (confirm("ลบห้องนี้?")) {
                 rooms = rooms.filter(r => r.id !== id);
-                if (currentRoomId === id) currentRoomId = rooms[0].id;
-                saveRooms();
+                if (currentRoomId === id && rooms.length > 0) {
+                    currentRoomId = rooms[0].id;
+                }
                 renderRoomList();
                 loadCurrentRoom();
             }
@@ -250,24 +250,18 @@
             room.other1Price = parseFloat(document.getElementById('other1Price').value) || 0;
             room.other2Name = document.getElementById('other2Name').value;
             room.other2Price = parseFloat(document.getElementById('other2Price').value) || 0;
-            saveRooms();
             renderRoomList();
         }
 
-        // ================== เตรียมเดือนถัดไป ==================
         function prepareNextMonth() {
             const room = rooms.find(r => r.id === currentRoomId);
             if (!room) return;
-
             if ((room.elecNew <= room.elecOld) && (room.waterNew <= room.waterOld)) {
                 if (!confirm("เลขมิเตอร์ใหม่ยังไม่มากกว่าเก่า ต้องการดำเนินการต่อหรือไม่?")) return;
             }
-
             room.elecOld = room.elecNew || 0;
             room.waterOld = room.waterNew || 0;
-            // ไม่ล้างเลขใหม่ เพื่อให้เห็นตัวเลขล่าสุด
-
-            saveRooms();
+            renderRoomList();
             loadCurrentRoom();
             alert(`✅ เตรียมเดือนถัดไปสำหรับ "${room.name}" เรียบร้อยแล้ว`);
         }
@@ -293,15 +287,28 @@
                         <span class="font-medium">ห้องพัก:</span>
                         <span class="font-semibold">${room.name}</span>
                     </div>
+
                     <div class="flex justify-between py-1 border-t">
                         <span>ค่าเช่าห้อง</span>
                         <span>${(room.rent || 0).toLocaleString()} บาท</span>
                     </div>
-                    <div class="flex justify-between py-1 border-t">
+
+                    <!-- เลขมิเตอร์ไฟ -->
+                    <div class="grid grid-cols-2 gap-4 text-xs bg-gray-50 p-3 rounded-lg">
+                        <div><span class="text-gray-500">ไฟฟ้าเก่า:</span> <span class="font-medium">${room.elecOld || 0}</span></div>
+                        <div><span class="text-gray-500">ไฟฟ้าใหม่:</span> <span class="font-medium">${room.elecNew || 0}</span></div>
+                    </div>
+                    <div class="flex justify-between py-1">
                         <span>ค่าไฟฟ้า (${elecUnit} หน่วย × ${room.elecRate} บาท)</span>
                         <span>${elecCost.toLocaleString()} บาท</span>
                     </div>
-                    <div class="flex justify-between py-1 border-t">
+
+                    <!-- เลขมิเตอร์น้ำ -->
+                    <div class="grid grid-cols-2 gap-4 text-xs bg-gray-50 p-3 rounded-lg">
+                        <div><span class="text-gray-500">น้ำเก่า:</span> <span class="font-medium">${room.waterOld || 0}</span></div>
+                        <div><span class="text-gray-500">น้ำใหม่:</span> <span class="font-medium">${room.waterNew || 0}</span></div>
+                    </div>
+                    <div class="flex justify-between py-1">
                         <span>ค่าน้ำ (${waterUnit} หน่วย × ${room.waterRate} บาท)</span>
                         <span>${waterCost.toLocaleString()} บาท</span>
                     </div>`;

@@ -16,7 +16,7 @@
 <body class="bg-gray-100 py-8">
     <div class="max-w-7xl mx-auto px-4">
         <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">🧾 ระบบตีบิลหอพัก (หลายห้อง)</h1>
-       
+      
         <div class="grid grid-cols-12 gap-6">
             <!-- Sidebar -->
             <div class="col-span-12 lg:col-span-3 bg-white rounded-2xl shadow p-4 h-fit">
@@ -40,6 +40,29 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อห้อง / ผู้เช่า</label>
                         <input id="roomName" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-2">
                     </div>
+
+                    <!-- เดือนที่ตีบิล -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">เดือนที่ตีบิล</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <select id="billingMonth" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+                                <option value="0">มกราคม</option>
+                                <option value="1">กุมภาพันธ์</option>
+                                <option value="2">มีนาคม</option>
+                                <option value="3">เมษายน</option>
+                                <option value="4">พฤษภาคม</option>
+                                <option value="5">มิถุนายน</option>
+                                <option value="6">กรกฎาคม</option>
+                                <option value="7">สิงหาคม</option>
+                                <option value="8">กันยายน</option>
+                                <option value="9">ตุลาคม</option>
+                                <option value="10">พฤศจิกายน</option>
+                                <option value="11">ธันวาคม</option>
+                            </select>
+                            <input id="billingYear" type="number" class="w-full border border-gray-300 rounded-lg px-4 py-2" value="2569">
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ค่าเช่าห้อง (บาท)</label>
                         <input id="roomRent" type="number" class="w-full border border-gray-300 rounded-lg px-4 py-2">
@@ -130,12 +153,22 @@
         let rooms = [];
         let currentRoomId = null;
 
+        const thaiMonths = [
+            "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+            "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+        ];
+
+        function getThaiMonthName(monthIndex) {
+            return thaiMonths[monthIndex] || "มกราคม";
+        }
+
         function loadRooms() {
             const saved = localStorage.getItem('dormRooms');
             if (saved) {
                 rooms = JSON.parse(saved);
                 if (rooms.length > 0) currentRoomId = rooms[0].id;
             } else {
+                const now = new Date();
                 rooms = [{
                     id: Date.now(),
                     name: "ห้อง 101 - นายสมชาย",
@@ -149,7 +182,9 @@
                     other1Name: "ค่าอินเทอร์เน็ต",
                     other1Price: 300,
                     other2Name: "ค่าทำความสะอาด",
-                    other2Price: 100
+                    other2Price: 100,
+                    billingMonth: now.getMonth(),
+                    billingYear: now.getFullYear() + 543
                 }];
                 currentRoomId = rooms[0].id;
             }
@@ -182,6 +217,7 @@
         }
 
         function addNewRoom() {
+            const now = new Date();
             const newRoom = {
                 id: Date.now(),
                 name: `ห้อง ${rooms.length + 101} - ผู้เช่าใหม่`,
@@ -189,7 +225,9 @@
                 elecOld: 0, elecNew: 0, elecRate: 8,
                 waterOld: 0, waterNew: 0, waterRate: 25,
                 other1Name: "ค่าอินเทอร์เน็ต", other1Price: 300,
-                other2Name: "", other2Price: 0
+                other2Name: "", other2Price: 0,
+                billingMonth: now.getMonth(),
+                billingYear: now.getFullYear() + 543
             };
             rooms.push(newRoom);
             currentRoomId = newRoom.id;
@@ -212,7 +250,7 @@
         function loadCurrentRoom() {
             const room = rooms.find(r => r.id === currentRoomId);
             if (!room) return;
-            
+
             document.getElementById('currentRoomTitle').textContent = room.name;
             document.getElementById('roomName').value = room.name;
             document.getElementById('roomRent').value = room.rent;
@@ -226,12 +264,17 @@
             document.getElementById('other1Price').value = room.other1Price || "";
             document.getElementById('other2Name').value = room.other2Name || "";
             document.getElementById('other2Price').value = room.other2Price || "";
+
+            document.getElementById('billingMonth').value = room.billingMonth !== undefined ? room.billingMonth : new Date().getMonth();
+            document.getElementById('billingYear').value = room.billingYear || (new Date().getFullYear() + 543);
+
             calculateCurrentBill();
         }
 
         function updateCurrentRoom() {
             const room = rooms.find(r => r.id === currentRoomId);
             if (!room) return;
+
             room.name = document.getElementById('roomName').value;
             room.rent = parseFloat(document.getElementById('roomRent').value) || 0;
             room.elecOld = parseFloat(document.getElementById('elecOld').value) || 0;
@@ -244,6 +287,9 @@
             room.other1Price = parseFloat(document.getElementById('other1Price').value) || 0;
             room.other2Name = document.getElementById('other2Name').value;
             room.other2Price = parseFloat(document.getElementById('other2Price').value) || 0;
+            room.billingMonth = parseInt(document.getElementById('billingMonth').value);
+            room.billingYear = parseInt(document.getElementById('billingYear').value);
+
             saveRooms();
             renderRoomList();
         }
@@ -251,11 +297,18 @@
         function prepareNextMonth() {
             const room = rooms.find(r => r.id === currentRoomId);
             if (!room) return;
+
             if ((room.elecNew <= room.elecOld) && (room.waterNew <= room.waterOld)) {
                 if (!confirm("เลขมิเตอร์ใหม่ยังไม่มากกว่าเก่า ต้องการดำเนินการต่อหรือไม่?")) return;
             }
+
             room.elecOld = room.elecNew || 0;
             room.waterOld = room.waterNew || 0;
+
+            // เพิ่มเดือนถัดไป
+            room.billingMonth = (room.billingMonth + 1) % 12;
+            if (room.billingMonth === 0) room.billingYear++;
+
             saveRooms();
             loadCurrentRoom();
             alert(`✅ เตรียมเดือนถัดไปสำหรับ "${room.name}" เรียบร้อยแล้ว`);
@@ -272,29 +325,29 @@
             const waterCost = waterUnit * (room.waterRate || 25);
             const total = (room.rent || 0) + elecCost + waterCost + (room.other1Price || 0) + (room.other2Price || 0);
 
+            const monthName = getThaiMonthName(room.billingMonth);
+
             let html = `
                 <div class="text-center border-b pb-4 mb-6">
                     <h2 class="text-2xl font-bold">บิลค่าเช่าหอพัก</h2>
-                    <p class="text-sm text-gray-500">เดือนพฤษภาคม 2569</p>
+                    <p class="text-sm text-gray-500">เดือน${monthName} ${room.billingYear}</p>
                 </div>
                 <div class="space-y-3 text-sm">
                     <div class="flex justify-between py-1">
                         <span class="font-medium">ห้องพัก:</span>
                         <span class="font-semibold">${room.name}</span>
                     </div>
-
-                    <!-- แสดงเลขมิเตอร์ไฟฟ้า -->
                     <div class="flex justify-between py-1 border-t">
                         <span>ค่าเช่าห้อง</span>
                         <span>${(room.rent || 0).toLocaleString()} บาท</span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-xs bg-gray-50 p-3 rounded-lg">
                         <div>
-                            <span class="text-gray-500">ไฟฟ้าเก่า:</span> 
+                            <span class="text-gray-500">ไฟฟ้าเก่า:</span>
                             <span class="font-medium">${room.elecOld || 0}</span>
                         </div>
                         <div>
-                            <span class="text-gray-500">ไฟฟ้าใหม่:</span> 
+                            <span class="text-gray-500">ไฟฟ้าใหม่:</span>
                             <span class="font-medium">${room.elecNew || 0}</span>
                         </div>
                     </div>
@@ -302,15 +355,13 @@
                         <span>ค่าไฟฟ้า (${elecUnit} หน่วย × ${room.elecRate} บาท)</span>
                         <span>${elecCost.toLocaleString()} บาท</span>
                     </div>
-
-                    <!-- แสดงเลขมิเตอร์น้ำ -->
                     <div class="grid grid-cols-2 gap-4 text-xs bg-gray-50 p-3 rounded-lg">
                         <div>
-                            <span class="text-gray-500">น้ำเก่า:</span> 
+                            <span class="text-gray-500">น้ำเก่า:</span>
                             <span class="font-medium">${room.waterOld || 0}</span>
                         </div>
                         <div>
-                            <span class="text-gray-500">น้ำใหม่:</span> 
+                            <span class="text-gray-500">น้ำใหม่:</span>
                             <span class="font-medium">${room.waterNew || 0}</span>
                         </div>
                     </div>
